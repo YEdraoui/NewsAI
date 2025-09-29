@@ -1,0 +1,41 @@
+﻿# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+
+# Vector DB
+vector_db/
+
+# Node.js
+newsai-frontend/node_modules/
+newsai-frontend/.next/
+newsai-frontend/out/
+newsai-frontend/.env*.local
+
+# OS
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# IDE
+.vscode/
+.idea/
+*.iml
+
+# Data files (large)
+*.xlsx
+*.csv
+*.msi
+
+# Logs
+*.log

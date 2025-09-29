@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NewsAI - نظام تصنيف الأخبار</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Header -->
+    <header class="bg-blue-900 text-white shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 py-6">
+            <h1 class="text-3xl font-bold">NewsAI</h1>
+            <p class="text-blue-200 mt-1">نظام الذكاء الاصطناعي للأخبار - وكالة الأنباء السعودية</p>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 py-8">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <!-- Input Section -->
+            <div class="bg-white rounded-lg shadow-sm p-6">
+                <h2 class="text-2xl font-bold text-gray-900 mb-4">إدخال المقال</h2>
+                
+                <textarea
+                    id="articleInput"
+                    placeholder="الصق المقال العربي هنا للتصنيف..."
+                    class="w-full h-64 p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 resize-none"
+                ></textarea>
+
+                <div class="mt-4 flex items-center justify-between">
+                    <span id="charCount" class="text-sm text-gray-500">0 حرف</span>
+                    <button
+                        id="classifyBtn"
+                        onclick="classifyArticle()"
+                        class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                        تصنيف المقال
+                    </button>
+                </div>
+            </div>
+
+            <!-- Results Section -->
+            <div class="bg-white rounded-lg shadow-sm p-6">
+                <h2 class="text-2xl font-bold text-gray-900 mb-4">نتيجة التصنيف</h2>
+                
+                <div id="resultsContainer">
+                    <div class="text-center py-12 text-gray-400">
+                        <p>أدخل مقالاً للحصول على نتيجة التصنيف</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const API_URL = 'http://127.0.0.1:8001';
+        
+        // Update character count
+        document.getElementById('articleInput').addEventListener('input', (e) => {
+            document.getElementById('charCount').textContent = e.target.value.length + ' حرف';
+        });
+
+        async function classifyArticle() {
+            const text = document.getElementById('articleInput').value.trim();
+            if (!text) return;
+
+            const btn = document.getElementById('classifyBtn');
+            const resultsContainer = document.getElementById('resultsContainer');
+
+            // Show loading
+            btn.disabled = true;
+            btn.textContent = 'جاري التصنيف...';
+            resultsContainer.innerHTML = `
+                <div class="text-center py-12">
+                    <div class="animate-spin w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full mx-auto mb-4"></div>
+                    <p class="text-gray-600">جاري تحليل المقال...</p>
+                </div>
+            `;
+
+            try {
+                const response = await fetch(`${API_URL}/classify`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text })
+                });
+
+                const data = await response.json();
+                displayResults(data);
+            } catch (error) {
+                resultsContainer.innerHTML = `
+                    <div class="bg-red-50 border-2 border-red-200 p-6 rounded-lg text-center">
+                        <p class="text-red-800 font-medium">خطأ في الاتصال بالخادم</p>
+                        <p class="text-sm text-red-600 mt-2">تأكد من تشغيل API على المنفذ 8001</p>
+                    </div>
+                `;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'تصنيف المقال';
+            }
+        }
+
+        function displayResults(data) {
+            const isApproved = data.decision === 'موافق';
+            const resultsContainer = document.getElementById('resultsContainer');
+
+            resultsContainer.innerHTML = `
+                <div class="space-y-6">
+                    <!-- Decision -->
+                    <div class="${isApproved ? 'bg-green-50 border-2 border-green-200' : 'bg-red-50 border-2 border-red-200'} p-6 rounded-lg">
+                        <h3 class="text-2xl font-bold ${isApproved ? 'text-green-800' : 'text-red-800'}">
+                            ${isApproved ? '✓ مقال موافق عليه' : '✗ مقال مرفوض'}
+                        </h3>
+                    </div>
+
+                    <!-- Confidence -->
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-gray-700 font-medium">مستوى الثقة</span>
+                            <span class="text-2xl font-bold text-blue-600">${(data.confidence * 100).toFixed(0)}%</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-3">
+                            <div class="bg-blue-600 h-3 rounded-full transition-all" style="width: ${data.confidence * 100}%"></div>
+                        </div>
+                    </div>
+
+                    <!-- Reasoning -->
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <h4 class="font-bold text-gray-900 mb-2">التفسير</h4>
+                        <p class="text-gray-700 leading-relaxed">${data.reasoning.substring(0, 200)}...</p>
+                    </div>
+
+                    <!-- Metadata -->
+                    <div class="grid grid-cols-2 gap-4 text-sm">
+                        <div class="bg-gray-50 p-3 rounded">
+                            <span class="text-gray-600">زمن المعالجة</span>
+                            <p class="font-bold text-lg">${data.processing_time.toFixed(2)}s</p>
+                        </div>
+                        <div class="bg-gray-50 p-3 rounded">
+                            <span class="text-gray-600">معرف المقال</span>
+                            <p class="font-bold text-sm">${data.article_id.substring(0, 8)}...</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>
